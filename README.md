@@ -132,6 +132,14 @@ mappings to `BRAND_DOMAINS` for better typosquat detection on brands you care ab
 ```bash
 npm uninstall syncralis-web-agent
 
-# for playwright package
+# For Playwright browsers
 npx playwright uninstall --all
 ```
+
+  **🧹 Final Cleanup (Both Environments):**
+
+  * For linux (Ubuntu, WSL2, etc.)
+      rm -ri ~/.cache/ms-playwright
+
+  * For Windows  (PowerShell)
+      Remove-Item -Path "$env:USERPROFILE\AppData\Local\ms-playwright" -Recurse -Confirm
