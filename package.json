@@ -1,6 +1,6 @@
 {
   "name": "syncralis-web-agent",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Enterprise-grade MCP server giving any MCP client a real, trust-checked, SSRF-protected browser: search, verify sites, read pages and social/official feeds, click, and download files (images, PDFs, Office docs) safely.",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
     "SECURITY.md",
     ".env.example"
   ],
-  "keywords": ["mcp", "model-context-protocol", "claude", "browser-automation", "playwright", "web-agent"],
+  "keywords": ["mcp", "model-context-protocol", "claude", "cursor", "browser-automation", "playwright", "web-agent"],
   "scripts": {
     "start": "node bin/cli.js",
     "test": "node --test tests/*.test.js",
