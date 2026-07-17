@@ -42,7 +42,9 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 ## Install
 
 ```bash
-git clone https://github.com/pslkk/syncralis-web-agent.git   # or unzip the package you were given
+npm install -g syncralis-web-agent
+
+# OR via GitHub: git clone https://github.com/pslkk/syncralis-web-agent.git   # or unzip the package you were given
 cd syncralis-web-agent
 npm install        # also downloads a Chromium binary via Playwright
 cp .env.example .env   # optional — defaults are secure without it
@@ -54,13 +56,13 @@ cp .env.example .env   # optional — defaults are secure without it
 npm start
 ```
 
-## Run tests
+## Run tests (GitHub Clone installs only)
 
 ```bash
 npm test
 ```
 
-## Add it to Claude Desktop / Claude Code
+## Add it as an MCP Server (Claude, Cursor, etc.)
 
 ```json
 {
