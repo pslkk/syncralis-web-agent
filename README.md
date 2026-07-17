@@ -136,10 +136,10 @@ npm uninstall syncralis-web-agent
 npx playwright uninstall --all
 ```
 
-  **🧹 Final Cleanup (Both Environments):**
+  ### 🧹 Final Cleanup (Both Environments):
 
-  * For linux (Ubuntu, WSL2, etc.)
-      rm -ri ~/.cache/ms-playwright
+  ### For linux (Ubuntu, WSL2, etc.)
+    rm -ri ~/.cache/ms-playwright
 
-  * For Windows  (PowerShell)
-      Remove-Item -Path "$env:USERPROFILE\AppData\Local\ms-playwright" -Recurse -Confirm
+  ### For Windows  (PowerShell)
+    Remove-Item -Path "$env:USERPROFILE\AppData\Local\ms-playwright" -Recurse -Confirm
