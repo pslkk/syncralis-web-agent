@@ -126,3 +126,12 @@ All variables are optional with secure defaults. Full list with descriptions in
 
 Edit `src/trust.js` — add domains to `CURATED_ALLOWLIST`, or brand→official-domain
 mappings to `BRAND_DOMAINS` for better typosquat detection on brands you care about.
+
+## 🗑️ Uninstall
+
+```bash
+npm uninstall syncralis-web-agent
+
+# for playwright package
+npx playwright uninstall --all
+```
