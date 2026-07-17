@@ -42,7 +42,7 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 ## Install
 
 ```bash
-git clone <this-repo> syncralis-web-agent   # or unzip the package you were given
+git clone https://github.com/pslkk/syncralis-web-agent.git   # or unzip the package you were given
 cd syncralis-web-agent
 npm install        # also downloads a Chromium binary via Playwright
 cp .env.example .env   # optional — defaults are secure without it
