@@ -1,4 +1,4 @@
-# syncralis-web-agent
+# syncralis-web-agent 🌐
 
 An MCP server that gives Claude (or any MCP client) a **real, isolated,
 trust-checked browser**: search, read pages *and* official/social feeds,
@@ -7,7 +7,7 @@ of every risky action.
 
 See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 
-## What this does
+## ✨ What this does
 
 - Runs a real headless Chromium (Playwright) per task, isolated context per sub-agent.
 - **Trust-scores** every domain before acting (HTTPS, curated allowlist, gov/edu bonus,
@@ -30,7 +30,7 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 - **Fully audited**: every navigation and trust decision is logged as structured JSON.
 - **Fails fast on bad config**: environment variables are schema-validated at startup.
 
-## What this deliberately does NOT do
+## 🚫 What this deliberately does NOT do
 
 - Does not guarantee any site is "100% genuine" — the scoring is a strong heuristic,
   not a legal/security guarantee.
@@ -39,30 +39,35 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
   explicitly, rather than pretending to read a live feed it can't reliably access.
 - Is not a sandboxed VM — see `SECURITY.md` for recommended container hardening.
 
-## Install
+## 🚀 Install
 
 ```bash
-npm install -g syncralis-web-agent
+# 🐧 Linux (Ubuntu, WSL2, etc.) Users: Cache sudo credentials first
+sudo apt update
 
-# OR via GitHub: git clone https://github.com/pslkk/syncralis-web-agent.git   # or unzip the package you were given
+npm install syncralis-web-agent
+
+# OR via GitHub:
+git clone https://github.com/pslkk/syncralis-web-agent.git
+
 cd syncralis-web-agent
 npm install        # also downloads a Chromium binary via Playwright
 cp .env.example .env   # optional — defaults are secure without it
 ```
 
-## Run standalone (for testing)
+## 🧪 Run standalone (for testing)
 
 ```bash
 npm start
 ```
 
-## Run tests (GitHub Clone installs only)
+## 🛠️ Run tests (GitHub Clone installs only)
 
 ```bash
 npm test
 ```
 
-## Add it as an MCP Server (Claude, Cursor, etc.)
+## 🔌 Add it as an MCP Server (Claude, Cursor, etc.)
 
 ```json
 {
@@ -78,10 +83,10 @@ npm test
 }
 ```
 
-Restart the client. Tools exposed: `web_search`, `open_page`, `research_query`,
+🔄 Restart the client. Tools exposed: `web_search`, `open_page`, `research_query`,
 `fetch_updates`, `click_on_page`, `download_file`, `confirm_action`, `list_pending_actions`.
 
-## Configuration
+## ⚙️ Configuration
 
 All variables are optional with secure defaults. Full list with descriptions in
 [`.env.example`](./.env.example). Highlights:
@@ -99,7 +104,7 @@ All variables are optional with secure defaults. Full list with descriptions in
 | `SYNCRALIS_WEB_AGENT_ALLOW_MACRO_OFFICE_DOWNLOADS` | `false` | Allow `.docm`/`.xlsm`/`.pptm`/etc (macro-capable Office files). Refused by default. |
 | `SYNCRALIS_WEB_AGENT_ALLOW_UNVERIFIED_EXTENSIONS` | `false` | Allow downloads of file types with no defined signature check. Refused by default. |
 
-## Example flows
+## 🌊 Example flows
 
 **"Download the Ferrari top model 4K picture"**
 1. `research_query` → ranked, trust-scored candidate pages.
@@ -117,7 +122,7 @@ All variables are optional with secure defaults. Full list with descriptions in
 3. Response tells you, per platform, whether it used a reliable official API or a
    best-effort web search — so you know exactly how much to trust each part.
 
-## Extending trust rules
+## 🧩 Extending trust rules
 
 Edit `src/trust.js` — add domains to `CURATED_ALLOWLIST`, or brand→official-domain
 mappings to `BRAND_DOMAINS` for better typosquat detection on brands you care about.
