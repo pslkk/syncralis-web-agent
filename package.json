@@ -1,0 +1,40 @@
+{
+  "name": "syncralis-web-agent",
+  "version": "1.0.0",
+  "description": "Enterprise-grade MCP server giving any MCP client a real, trust-checked, SSRF-protected browser: search, verify sites, read pages and social/official feeds, click, and download files (images, PDFs, Office docs) safely.",
+  "type": "module",
+  "bin": {
+    "syncralis-web-agent": "./bin/cli.js"
+  },
+  "main": "src/index.js",
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "SECURITY.md",
+    ".env.example"
+  ],
+  "keywords": ["mcp", "model-context-protocol", "claude", "browser-automation", "playwright", "web-agent"],
+  "scripts": {
+    "start": "node bin/cli.js",
+    "postinstall": "playwright install chromium --with-deps || playwright install chromium"
+  },
+  "author": "PSLKK <coregravity0.0.0@protonmail.com> (https://pslkk.space)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pslkk/syncralis-web-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pslkk/syncralis-web-agent/issues"
+  },
+  "homepage": "https://github.com/pslkk/syncralis-web-agent#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "playwright": "^1.61.1",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
