@@ -17,10 +17,11 @@
   "keywords": ["mcp", "model-context-protocol", "claude", "browser-automation", "playwright", "web-agent"],
   "scripts": {
     "start": "node bin/cli.js",
+    "test": "node --test tests/*.test.js",
     "postinstall": "playwright install chromium --with-deps || playwright install chromium"
   },
   "author": "PSLKK <coregravity0.0.0@protonmail.com> (https://pslkk.space)",
-  "license": "MIT",
+  "license": "ISC",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pslkk/syncralis-web-agent.git"
