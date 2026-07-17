@@ -21,7 +21,7 @@ function json(data) {
 export async function startServer() {
   const server = new McpServer({
     name: "syncralis-web-agent",
-    version: "1.0.0",
+    version: "1.2.0",
   });
 
 
