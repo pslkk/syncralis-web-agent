@@ -45,6 +45,10 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 # 🐧 Linux (Ubuntu, WSL2, etc.) Users: Cache sudo credentials first
 sudo apt update
 
+# Create and enter your new project folder
+mkdir syncralis-web-agent
+cd syncralis-web-agent
+
 npm install syncralis-web-agent
 
 # OR via GitHub:
@@ -53,12 +57,6 @@ git clone https://github.com/pslkk/syncralis-web-agent.git
 cd syncralis-web-agent
 npm install        # also downloads a Chromium binary via Playwright
 cp .env.example .env   # optional — defaults are secure without it
-```
-
-## 🧪 Run standalone (for testing)
-
-```bash
-npm start
 ```
 
 ## 🛠️ Run tests (GitHub Clone installs only)
