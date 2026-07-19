@@ -13,7 +13,8 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
   Search APIs (with automatic failover, retry+backoff, circuit breaking, and rate
   limiting) instead of scraping a search engine's HTML through a browser — avoiding the
   "are you a bot" / CAPTCHA blocks that scraping-based search hits in production.
-- Runs a real headless Chromium (Playwright) per task, isolated context per sub-agent.
+- Runs a real headless Chromium (Playwright) per task, isolated context per sub-agent
+  for `open_page`, `click_on_page`, and downloads.
 - **Trust-scores** every domain before acting (HTTPS, curated allowlist, gov/edu bonus,
   typosquat detection against brand names in your query, low-quality-domain flags) —
   auto-acts above your configured threshold, otherwise **stages the action and requires
@@ -107,6 +108,9 @@ npm test
 }
 ```
 
+Set at least one of `SYNCRALIS_WEB_AGENT_TAVILY_API_KEY` / `SYNCRALIS_WEB_AGENT_BRAVE_API_KEY`
+for `web_search`/`research_query` to work — see [Configure web search](#-configure-web-search) above.
+
 🔄 Restart the client. Tools exposed: `web_search`, `open_page`, `research_query`,
 `fetch_updates`, `click_on_page`, `download_file`, `confirm_action`, `list_pending_actions`.
 
@@ -119,6 +123,9 @@ All variables are optional with secure defaults. Full list with descriptions in
 |---|---|---|
 | `SYNCRALIS_WEB_AGENT_TRUST_THRESHOLD` | `80` | Min trust score (0-100) to auto-act. |
 | `SYNCRALIS_WEB_AGENT_RESPECT_ROBOTS_TXT` | `true` | Enforce robots.txt. |
+| `SYNCRALIS_WEB_AGENT_TAVILY_API_KEY` | — | **Required for reliable `web_search`.** Tavily API key (tavily.com). |
+| `SYNCRALIS_WEB_AGENT_BRAVE_API_KEY` | — | **Required for reliable `web_search`.** Brave Search API key (brave.com/search/api). |
+| `SYNCRALIS_WEB_AGENT_WEB_SEARCH_PROVIDER` | `auto` | Force `tavily` or `brave`, or `auto` to use whichever key(s) are set (with failover). |
 | `SYNCRALIS_WEB_AGENT_RATE_LIMIT_PER_DOMAIN_PER_MIN` | `20` | Per-domain request cap. |
 | `SYNCRALIS_WEB_AGENT_MAX_DOWNLOAD_BYTES` | 50MB | Download size cap. |
 | `SYNCRALIS_WEB_AGENT_X_BEARER_TOKEN` | — | Enables reliable official X API reads. |
