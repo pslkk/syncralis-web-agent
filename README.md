@@ -9,6 +9,10 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 
 ## ✨ What this does
 
+- **API-based web search**: `web_search`/`research_query` use the Tavily and/or Brave
+  Search APIs (with automatic failover, retry+backoff, circuit breaking, and rate
+  limiting) instead of scraping a search engine's HTML through a browser — avoiding the
+  "are you a bot" / CAPTCHA blocks that scraping-based search hits in production.
 - Runs a real headless Chromium (Playwright) per task, isolated context per sub-agent.
 - **Trust-scores** every domain before acting (HTTPS, curated allowlist, gov/edu bonus,
   typosquat detection against brand names in your query, low-quality-domain flags) —
@@ -42,22 +46,42 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 ## 🚀 Install
 
 ```bash
-# 🐧 Linux (Ubuntu, WSL2, etc.) Users: Cache sudo credentials first
-sudo apt update
 
 # Create and enter your new project folder
 mkdir syncralis-web-agent
 cd syncralis-web-agent
 
+# Install the package locally (automatically downloads the Chromium binary)
 npm install syncralis-web-agent
+
+# 🐧 Linux only (Ubuntu, WSL2, etc.) Securely install required OS graphics libraries
+sudo npx playwright install-deps chromium
+
 
 # OR via GitHub:
 git clone https://github.com/pslkk/syncralis-web-agent.git
 
 cd syncralis-web-agent
 npm install        # also downloads a Chromium binary via Playwright
+
+# 🐧 Linux only (Ubuntu, WSL2, etc.) Securely install required OS graphics libraries
+sudo npx playwright install-deps chromium
+
 cp .env.example .env   # optional — defaults are secure without it
 ```
+
+### 🔑 Configure web search
+
+`web_search` (and `research_query`, which is built on it) needs at least one search
+API key — get a free-tier key from either:
+
+- [Tavily](https://tavily.com) → `SYNCRALIS_WEB_AGENT_TAVILY_API_KEY`
+- [Brave Search API](https://brave.com/search/api) → `SYNCRALIS_WEB_AGENT_BRAVE_API_KEY`
+
+Set one (or both, for automatic failover) in `.env`. Without a key configured,
+`web_search` fails fast with a clear error rather than falling back to unreliable
+scraping. See `.env.example` for the full list of search-related options (provider
+selection, timeout, retries, safe-search level).
 
 ## 🛠️ Run tests (GitHub Clone installs only)
 
