@@ -1,4 +1,4 @@
-import { newTaskSession, safeGoto } from "../browser.js";
+import { runWebSearch } from "./searchProviders/index.js";
 import { scoreDomain } from "../trust.js";
 import {
   sanitizeUntrustedText,
@@ -6,49 +6,75 @@ import {
   UNTRUSTED_CONTENT_WARNING,
 } from "../security/promptInjection.js";
 import { logEvent } from "../security/auditLog.js";
+import { config } from "../config.js";
 
 export async function webSearch({ query, mentionedBrands = [], maxResults = 8 }) {
-  const session = await newTaskSession();
+  const startedAt = Date.now();
+
+  let outcome;
   try {
-    const engineUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-    await safeGoto(session.page, engineUrl);
-
-    const rawResults = await session.page.$$eval(
-      "a.result__a",
-      (els) =>
-        els.map((el) => ({
-          title: el.textContent?.trim() || "",
-          href: el.getAttribute("href") || "",
-        }))
-    );
-
-    const results = rawResults
-      .filter((r) => r.href && r.href.startsWith("http"))
-      .slice(0, maxResults)
-      .map((r) => {
-        const trust = scoreDomain(r.href, { mentionedBrands });
-        return { ...r, title: sanitizeUntrustedText(r.title, { maxLength: 200 }), trust };
-      })
-      .sort((a, b) => b.trust.score - a.trust.score);
-
-    const payload = {
+    outcome = await runWebSearch({
       query,
-      contentWarning: UNTRUSTED_CONTENT_WARNING,
-      results,
-    };
-
-    annotateWithInjectionSignals(payload, ...results.map((r) => r.title));
-
-    if (payload.injectionSignalsDetected) {
-      await logEvent({
-        action: "prompt_injection_signal_detected",
-        url: engineUrl,
-        signals: payload.injectionSignalsDetected,
-      });
-    }
-
-    return payload;
-  } finally {
-    await session.close();
+      maxResults,
+      safeSearch: config.WEB_SEARCH_SAFE_SEARCH,
+      timeoutMs: config.WEB_SEARCH_TIMEOUT_MS,
+    });
+  } catch (err) {
+    await logEvent({
+      action: "web_search_failed",
+      query,
+      latencyMs: Date.now() - startedAt,
+      error: String(err?.message || err),
+      ...(err?.attempts ? { attempts: err.attempts } : {}),
+    });
+    throw err;
   }
+
+  const results = outcome.results
+    .filter((r) => r.href && /^https?:\/\//i.test(r.href))
+    .slice(0, maxResults)
+    .map((r) => {
+      const trust = scoreDomain(r.href, { mentionedBrands });
+      return {
+        title: sanitizeUntrustedText(r.title, { maxLength: 200 }),
+        href: r.href,
+        snippet: sanitizeUntrustedText(r.snippet || "", { maxLength: 500 }),
+        ...(r.publishedDate ? { publishedDate: r.publishedDate } : {}),
+        trust,
+      };
+    })
+    .sort((a, b) => b.trust.score - a.trust.score);
+
+  const payload = {
+    query,
+    provider: outcome.provider,
+    contentWarning: UNTRUSTED_CONTENT_WARNING,
+    results,
+  };
+
+  annotateWithInjectionSignals(
+    payload,
+    ...results.map((r) => r.title),
+    ...results.map((r) => r.snippet)
+  );
+
+  await logEvent({
+    action: "web_search",
+    query,
+    provider: outcome.provider,
+    resultCount: results.length,
+    latencyMs: Date.now() - startedAt,
+    ...(outcome.attempts?.some((a) => !a.ok) ? { degraded: true, attempts: outcome.attempts } : {}),
+  });
+
+  if (payload.injectionSignalsDetected) {
+    await logEvent({
+      action: "prompt_injection_signal_detected",
+      source: "web_search",
+      query,
+      signals: payload.injectionSignalsDetected,
+    });
+  }
+
+  return payload;
 }
