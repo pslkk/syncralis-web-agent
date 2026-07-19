@@ -11,6 +11,8 @@ security reviewer can assess fit for their environment.
 | Disguised malicious download (e.g. `.exe` renamed `.jpg`, double extension) | Magic-byte signature check per claimed type; OOXML internal-structure check for docx/xlsx/pptx; blocks known-dangerous extensions anywhere in the filename, not just the suffix | `src/quarantine.js` |
 | Malware distributed via a "legitimate-looking" download | Optional VirusTotal hash-reputation check (requires API key) | `src/quarantine.js` |
 | Uncontrolled resource use / abusive crawling of a target site | Per-domain token-bucket rate limiting; per-domain circuit breaker after repeated failures | `src/security/rateLimiter.js`, `src/security/circuitBreaker.js` |
+| Search blocked by anti-bot / CAPTCHA walls ("are you a bot") | `web_search` calls an authenticated search API (Tavily and/or Brave) instead of scraping a search engine's HTML through a headless browser, with per-provider retry+backoff, circuit breaking, and rate limiting; automatic failover between configured providers; an unauthenticated browser-scrape path exists only as an explicit opt-in last resort (`SYNCRALIS_WEB_AGENT_ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK`) | `src/tools/searchProviders/*`, `src/tools/search.js` |
+| Search API key leakage in logs/errors | Keys are only ever sent in the `Authorization`/`X-Subscription-Token` request header, never logged, never included in error messages or audit log entries | `src/tools/searchProviders/*`, `src/security/auditLog.js` |
 | Violating site policy | robots.txt is fetched and enforced by default (`SYNCRALIS_WEB_AGENT_RESPECT_ROBOTS_TXT=true`) | `src/security/robots.js` |
 | Acting on a low-trust/impersonating domain without oversight | Every click/download is trust-scored (0-100); below threshold, the action is staged and requires explicit user confirmation via `confirm_action` rather than proceeding | `src/trust.js`, `src/confirmations.js` |
 | No audit trail for compliance review | Every navigation and risky-action decision is logged as structured JSON (stderr always, optional file) | `src/security/auditLog.js` |
@@ -39,6 +41,10 @@ security reviewer can assess fit for their environment.
   dependency).
 - **robots.txt enforcement** relies on the target site publishing one and
   is not itself a security boundary — it's a courtesy/compliance measure.
+- **`web_search` requires a Tavily and/or Brave API key** to get reliable,
+  non-blocked results. Without one (and without explicitly opting into the
+  legacy browser-scrape fallback), `web_search`/`research_query` fail fast
+  with an actionable error rather than silently returning nothing.
 
 ## Recommended deployment hardening (outside this package's scope)
 
@@ -54,6 +60,10 @@ security reviewer can assess fit for their environment.
 
 Since this is a local package you control the source for, review
 `src/security/*` directly and adjust as needed for your risk tolerance.
+
+## Changelog: v2.0.0 hardening pass (Public release)
+
+- **[Fixed]** Installation issues, and other minor issues
 
 ## Changelog: v1.0.0 hardening pass (Public release)
 
