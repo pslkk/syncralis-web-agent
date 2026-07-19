@@ -63,7 +63,7 @@ Since this is a local package you control the source for, review
 
 ## Changelog: v2.0.0 hardening pass (Public release)
 
-- **[Fixed]** Installation issues, and other minor issues
+- **[Fixed]** Installation issues, and other minor issues.
 
 ## Changelog: v1.0.0 hardening pass (Public release)
 
