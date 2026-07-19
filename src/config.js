@@ -41,6 +41,17 @@ const schema = z.object({
   INSTAGRAM_BUSINESS_ACCOUNT_ID: z.string().optional(),
   VIRUSTOTAL_API_KEY: z.string().optional(),
   NAVIGATION_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
+  
+  WEB_SEARCH_PROVIDER: z.enum(["auto", "tavily", "brave"]).default("auto"),
+  TAVILY_API_KEY: z.string().optional(),
+  BRAVE_API_KEY: z.string().optional(),
+  WEB_SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  WEB_SEARCH_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  WEB_SEARCH_SAFE_SEARCH: z.enum(["off", "moderate", "strict"]).default("moderate"),
+  ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 function fromEnv() {
@@ -65,6 +76,14 @@ function fromEnv() {
     INSTAGRAM_BUSINESS_ACCOUNT_ID: process.env.SYNCRALIS_WEB_AGENT_INSTAGRAM_BUSINESS_ACCOUNT_ID,
     VIRUSTOTAL_API_KEY: process.env.SYNCRALIS_WEB_AGENT_VIRUSTOTAL_API_KEY,
     NAVIGATION_TIMEOUT_MS: process.env.SYNCRALIS_WEB_AGENT_NAVIGATION_TIMEOUT_MS,
+    WEB_SEARCH_PROVIDER: process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_PROVIDER,
+    TAVILY_API_KEY: process.env.SYNCRALIS_WEB_AGENT_TAVILY_API_KEY,
+    BRAVE_API_KEY: process.env.SYNCRALIS_WEB_AGENT_BRAVE_API_KEY,
+    WEB_SEARCH_TIMEOUT_MS: process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_TIMEOUT_MS,
+    WEB_SEARCH_MAX_RETRIES: process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_MAX_RETRIES,
+    WEB_SEARCH_SAFE_SEARCH: process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_SAFE_SEARCH,
+    ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK:
+      process.env.SYNCRALIS_WEB_AGENT_ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK,
   };
 
   const parsed = schema.safeParse(raw);
