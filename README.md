@@ -98,7 +98,9 @@ npm test
       "command": "node",
       "args": ["/absolute/path/to/syncralis-web-agent/bin/cli.js"],
       "env": {
-        "SYNCRALIS_WEB_AGENT_TRUST_THRESHOLD": "80"
+        "SYNCRALIS_WEB_AGENT_TRUST_THRESHOLD": "80",
+        "SYNCRALIS_WEB_AGENT_TAVILY_API_KEY": "tvly-xxxxxxxxxxxxxxxx",
+        "SYNCRALIS_WEB_AGENT_BRAVE_API_KEY": "BSAxxxxxxxxxxxxxxxx"
       }
     }
   }
