@@ -61,6 +61,60 @@ security reviewer can assess fit for their environment.
 Since this is a local package you control the source for, review
 `src/security/*` directly and adjust as needed for your risk tolerance.
 
+## Changelog: v2.1.0 hardening pass
+
+- **[Added] Visually-hidden-text deception detection.** `open_page` now
+  additionally scans the DOM for text that is present and readable by the
+  agent but deliberately hidden from a human via CSS (near-zero opacity,
+  off-screen positioning, `clip`/`clip-path` tricks, or text colored to
+  match its background). This closes a real gap: prior versions only
+  regex-matched extracted text for injection keywords, which a paraphrased,
+  foreign-language, or encoded payload trivially evades — hiding the text
+  from a human in the first place has no legitimate purpose regardless of
+  its wording, so presence alone is now surfaced as a signal
+  (`hiddenTextDetected`, `hiddenText`, `hidden_text_present` in
+  `injectionSignalsDetected`), independent of keyword matching. See
+  `src/security/textVisibility.js`.
+- **[Added] The same visual-deception check now also gates click/download
+  targets.** `click_on_page` and `download_file` refuse to interact with an
+  element matched by `matchText`/`selector` that is invisible to a human by
+  the same criteria above, even though it passes Playwright's own coarser
+  visibility check (non-zero bounding box, not `display:none`). A page has
+  no legitimate reason to make the exact element an agent was told to click
+  invisible to the person supposedly using it. Opt-out:
+  `SYNCRALIS_WEB_AGENT_ALLOW_CLICK_ON_VISUALLY_HIDDEN_ELEMENTS`. See
+  `src/tools/elementVisibility.js`.
+- **[Added] Optional outbound Web Bot Auth signing** (RFC 9421 HTTP Message
+  Signatures, Ed25519). When `SYNCRALIS_WEB_AGENT_BOT_AUTH_AGENT_URL` is
+  configured, this agent signs its own navigation requests so a site can
+  cryptographically verify traffic came from a known, honestly-declared
+  agent rather than an anonymous scraper. This is about this agent proving
+  its own identity outbound; it does not verify or trust anything about the
+  sites visited. Off by default. See `src/security/webBotAuth.js`.
+- **[Added] Local adaptive trust memory.** Explicit user decisions made via
+  `confirm_action`/`reject_action` on a staged (below-threshold)
+  click/download are now recorded per-domain. Enough repeated explicit
+  confirmations can promote a domain to the auto-approve threshold — never
+  past it, and never for a domain the heuristic scorer hard-flagged (e.g. a
+  typosquat, no-HTTPS, or free-abuse-TLD match) — while a single rejection
+  blocks any promotion for a cooldown window regardless of prior
+  confirmation count. On by default; disable with
+  `SYNCRALIS_WEB_AGENT_TRUST_MEMORY_ENABLED=false` for deployments that
+  require fully stateless, heuristic-only scoring. See `src/trustMemory.js`.
+- **[Added]** `reject_action` tool. Previously the only way to decline a
+  staged action was to let its confirmation id expire, which recorded
+  nothing; explicit rejection is now itself a signal (see trust memory,
+  above).
+- **[Fixed, was a real bug] `scoreDomain()` became `async`** as part of the
+  trust-memory work above (it may now do a filesystem read), but several
+  call sites were not updated to `await` it: `src/tools/openPage.js`,
+  `src/tools/search.js`, and `src/index.js`'s `click_on_page`/
+  `download_file` handlers. An un-awaited call returns a pending Promise,
+  which `JSON.stringify`s to `{}` — silently discarding the trust score,
+  verdict, and reasons from every affected tool response with no error
+  raised anywhere. Every call site (and `tests/trust.test.js`) has been
+  audited and fixed to `await` it correctly.
+
 ## Changelog: v2.0.0 hardening pass (Public release)
 
 - **[Fixed]** Installation issues, and other minor issues.

@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { config } from "./config.js";
+import { config, trustMemoryPath } from "./config.js";
 import { webSearch } from "./tools/search.js";
 import { openPage } from "./tools/openPage.js";
 import { clickElement } from "./tools/clickElement.js";
@@ -10,7 +10,8 @@ import { downloadFile } from "./tools/downloadFile.js";
 import { fetchUpdates } from "./tools/fetchUpdates.js";
 import { researchQuery } from "./orchestrator.js";
 import { trustThreshold, scoreDomain } from "./trust.js";
-import { stageAction, confirmAction, listPending } from "./confirmations.js";
+import { stageAction, confirmAction, rejectAction, peekAction, listPending } from "./confirmations.js";
+import { recordDecision } from "./trustMemory.js";
 import { shutdownBrowser } from "./browser.js";
 import { logEvent } from "./security/auditLog.js";
 
@@ -18,10 +19,27 @@ function json(data) {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 }
 
+async function recordTrustMemoryDecision(meta, decision, confirmationId) {
+  if (!config.TRUST_MEMORY_ENABLED) return;
+  const domain = meta?.domain;
+  if (!domain) return;
+  try {
+    await recordDecision(trustMemoryPath(), domain, decision);
+    await logEvent({ action: `trust_memory_${decision}`, domain, confirmationId }).catch(() => {});
+  } catch (err) {
+    await logEvent({
+      action: "trust_memory_write_failed",
+      domain,
+      confirmationId,
+      error: String(err?.message || err),
+    }).catch(() => {});
+  }
+}
+
 export async function startServer() {
   const server = new McpServer({
     name: "syncralis-web-agent",
-    version: "2.0.0",
+    version: "2.1.0",
   });
 
 
@@ -86,7 +104,7 @@ export async function startServer() {
       },
     },
     async ({ url, matchText, selector, mentionedBrands }) => {
-      const trust = scoreDomain(url, { mentionedBrands });
+      const trust = await scoreDomain(url, { mentionedBrands });
       const threshold = trustThreshold();
       const run = () => clickElement({ url, matchText, selector });
 
@@ -94,7 +112,7 @@ export async function startServer() {
         await logEvent({ action: "click_auto_approved", url, trustScore: trust.score });
         return json({ autoApproved: true, trust, result: await run() });
       }
-      const id = stageAction(`Click on ${url}`, run);
+      const id = stageAction(`Click on ${url}`, run, { domain: trust.domain, kind: "click", url });
       await logEvent({ action: "click_staged_for_confirmation", url, trustScore: trust.score, confirmationId: id });
       return json({
         autoApproved: false,
@@ -102,7 +120,8 @@ export async function startServer() {
         confirmationId: id,
         message:
           `This site scored ${trust.score}/100 trust (${trust.verdict}): ${trust.reasons.join("; ")}. ` +
-          `Ask the user for explicit confirmation, then call confirm_action with confirmationId="${id}".`,
+          `Ask the user for explicit confirmation, then call confirm_action with confirmationId="${id}" ` +
+          `(or reject_action with the same id if they decline).`,
       });
     }
   );
@@ -123,7 +142,7 @@ export async function startServer() {
     },
     async ({ url, directUrl, matchText, selector, mentionedBrands }) => {
       const target = directUrl || url;
-      const trust = scoreDomain(target, { mentionedBrands });
+      const trust = await scoreDomain(target, { mentionedBrands });
       const threshold = trustThreshold();
       const run = () => downloadFile({ url, directUrl, matchText, selector });
 
@@ -138,7 +157,7 @@ export async function startServer() {
         });
         return json({ autoApproved: true, trust, result });
       }
-      const id = stageAction(`Download from ${target}`, run);
+      const id = stageAction(`Download from ${target}`, run, { domain: trust.domain, kind: "download", url: target });
       await logEvent({ action: "download_staged_for_confirmation", url: target, trustScore: trust.score, confirmationId: id });
       return json({
         autoApproved: false,
@@ -146,7 +165,8 @@ export async function startServer() {
         confirmationId: id,
         message:
           `This source scored ${trust.score}/100 trust (${trust.verdict}): ${trust.reasons.join("; ")}. ` +
-          `Ask the user for explicit confirmation before downloading anything from it, then call confirm_action with confirmationId="${id}".`,
+          `Ask the user for explicit confirmation before downloading anything from it, then call ` +
+          `confirm_action with confirmationId="${id}" (or reject_action with the same id if they decline).`,
       });
     }
   );
@@ -172,10 +192,41 @@ export async function startServer() {
     {
       title: "Confirm a staged action",
       description:
-        "Run a previously staged click/download action after the user has explicitly approved it.",
+        "Run a previously staged click/download action after the user has explicitly approved it. " +
+        "This also records the approval in local trust memory, so a domain the user repeatedly and " +
+        "explicitly approves may eventually be auto-approved without asking again (see SECURITY.md).",
       inputSchema: { confirmationId: z.string() },
     },
-    async ({ confirmationId }) => json(await confirmAction(confirmationId))
+    async ({ confirmationId }) => {
+      const result = await confirmAction(confirmationId);
+      if (result.ok) {
+        await recordTrustMemoryDecision(result.meta, "confirmed", confirmationId);
+      }
+      return json(result);
+    }
+  );
+
+  server.registerTool(
+    "reject_action",
+    {
+      title: "Reject a staged action",
+      description:
+        "Explicitly decline a previously staged click/download action so it will never run. Use this " +
+        "whenever the user says no to a confirmation request, rather than simply letting it expire — " +
+        "an explicit rejection is recorded in local trust memory and makes this domain LESS likely to " +
+        "be auto-approved in the future, whereas an expired-but-never-answered request has no effect " +
+        "either way.",
+      inputSchema: { confirmationId: z.string() },
+    },
+    async ({ confirmationId }) => {
+      const staged = peekAction(confirmationId);
+      const removed = rejectAction(confirmationId);
+      if (removed && staged?.meta) {
+        await recordTrustMemoryDecision(staged.meta, "rejected", confirmationId);
+      }
+      await logEvent({ action: "action_rejected", confirmationId, removed }).catch(() => {});
+      return json({ ok: removed, confirmationId });
+    }
   );
 
   server.registerTool(

@@ -112,7 +112,7 @@ Set at least one of `SYNCRALIS_WEB_AGENT_TAVILY_API_KEY` / `SYNCRALIS_WEB_AGENT_
 for `web_search`/`research_query` to work — see [Configure web search](#-configure-web-search) above.
 
 🔄 Restart the client. Tools exposed: `web_search`, `open_page`, `research_query`,
-`fetch_updates`, `click_on_page`, `download_file`, `confirm_action`, `list_pending_actions`.
+`fetch_updates`, `click_on_page`, `download_file`, `confirm_action`, `reject_action`, `list_pending_actions`.
 
 ## ⚙️ Configuration
 

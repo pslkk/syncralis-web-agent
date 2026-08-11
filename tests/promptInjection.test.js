@@ -6,6 +6,7 @@ import {
   sanitizeUntrustedText,
   annotateWithInjectionSignals,
   UNTRUSTED_CONTENT_WARNING,
+  HIDDEN_TEXT_SIGNAL,
 } from "../src/security/promptInjection.js";
 
 test("stripHiddenUnicode removes zero-width and bidi-control characters", () => {
@@ -91,4 +92,13 @@ test("UNTRUSTED_CONTENT_WARNING is a non-empty, informative string", () => {
   assert.equal(typeof UNTRUSTED_CONTENT_WARNING, "string");
   assert.ok(UNTRUSTED_CONTENT_WARNING.length > 50);
   assert.ok(UNTRUSTED_CONTENT_WARNING.toLowerCase().includes("untrusted"));
+});
+
+test("UNTRUSTED_CONTENT_WARNING documents hiddenText / hiddenTextDetected fields", () => {
+  assert.ok(UNTRUSTED_CONTENT_WARNING.includes("hiddenTextDetected"));
+  assert.ok(UNTRUSTED_CONTENT_WARNING.includes("hiddenText"));
+});
+
+test("HIDDEN_TEXT_SIGNAL is a stable, non-empty string identifier", () => {
+  assert.equal(HIDDEN_TEXT_SIGNAL, "hidden_text_present");
 });

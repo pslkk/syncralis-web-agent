@@ -20,11 +20,21 @@ function ensureSweeper() {
   sweepTimer.unref?.();
 }
 
-export function stageAction(description, run) {
+export function stageAction(description, run, meta = {}) {
   ensureSweeper();
   const id = `act_${++counter}_${Date.now()}`;
-  pending.set(id, { description, run, createdAt: Date.now() });
+  pending.set(id, { description, run, createdAt: Date.now(), meta });
   return id;
+}
+
+export function peekAction(id) {
+  const entry = pending.get(id);
+  if (!entry) return undefined;
+  return {
+    description: entry.description,
+    meta: entry.meta || {},
+    ageSeconds: Math.round((Date.now() - entry.createdAt) / 1000),
+  };
 }
 
 export async function confirmAction(id) {
@@ -34,13 +44,13 @@ export async function confirmAction(id) {
   }
   pending.delete(id);
   if (Date.now() - entry.createdAt > TTL_MS) {
-    return { ok: false, error: `Confirmation id "${id}" expired. Please retry the original action.` };
+    return { ok: false, error: `Confirmation id "${id}" expired. Please retry the original action.`, meta: entry.meta };
   }
   try {
     const result = await entry.run();
-    return { ok: true, result };
+    return { ok: true, result, meta: entry.meta };
   } catch (err) {
-    return { ok: false, error: String(err?.message || err) };
+    return { ok: false, error: String(err?.message || err), meta: entry.meta };
   }
 }
 

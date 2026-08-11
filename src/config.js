@@ -1,4 +1,7 @@
 import { z } from "zod";
+import os from "node:os";
+import path from "node:path";
+import { loadOrCreateKeypair } from "./security/webBotAuth.js";
 
 const schema = z.object({
   TRUST_THRESHOLD: z.coerce.number().min(0).max(100).default(80),
@@ -30,6 +33,10 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  ALLOW_CLICK_ON_VISUALLY_HIDDEN_ELEMENTS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   HTTP_PROXY: z
     .string()
     .optional()
@@ -52,6 +59,24 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  BOT_AUTH_AGENT_URL: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^https?:\/\/.+/i.test(v), {
+      message:
+        "must be the full https://your-domain URL where you will publish " +
+        "/.well-known/http-message-signatures-directory (see buildDirectoryDocument())",
+    }),
+  BOT_AUTH_KEY_DIR: z.string().optional(),
+
+  TRUST_MEMORY_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
+  TRUST_MEMORY_PATH: z.string().optional(),
+  TRUST_MEMORY_MIN_CONFIRMATIONS: z.coerce.number().int().min(1).max(1000).default(5),
+  TRUST_MEMORY_MAX_AGE_DAYS: z.coerce.number().int().positive().default(90),
+  TRUST_MEMORY_REJECTION_COOLDOWN_DAYS: z.coerce.number().int().positive().default(30),
 });
 
 function fromEnv() {
@@ -84,6 +109,14 @@ function fromEnv() {
     WEB_SEARCH_SAFE_SEARCH: process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_SAFE_SEARCH,
     ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK:
       process.env.SYNCRALIS_WEB_AGENT_ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK,
+    BOT_AUTH_AGENT_URL: process.env.SYNCRALIS_WEB_AGENT_BOT_AUTH_AGENT_URL,
+    BOT_AUTH_KEY_DIR: process.env.SYNCRALIS_WEB_AGENT_BOT_AUTH_KEY_DIR,
+    TRUST_MEMORY_ENABLED: process.env.SYNCRALIS_WEB_AGENT_TRUST_MEMORY_ENABLED,
+    TRUST_MEMORY_PATH: process.env.SYNCRALIS_WEB_AGENT_TRUST_MEMORY_PATH,
+    TRUST_MEMORY_MIN_CONFIRMATIONS: process.env.SYNCRALIS_WEB_AGENT_TRUST_MEMORY_MIN_CONFIRMATIONS,
+    TRUST_MEMORY_MAX_AGE_DAYS: process.env.SYNCRALIS_WEB_AGENT_TRUST_MEMORY_MAX_AGE_DAYS,
+    TRUST_MEMORY_REJECTION_COOLDOWN_DAYS:
+      process.env.SYNCRALIS_WEB_AGENT_TRUST_MEMORY_REJECTION_COOLDOWN_DAYS,
   };
 
   const parsed = schema.safeParse(raw);
@@ -97,3 +130,31 @@ function fromEnv() {
 }
 
 export const config = fromEnv();
+
+function defaultAppDataDir() {
+  return path.join(os.homedir(), ".syncralis-web-agent");
+}
+
+export function botAuthKeyDir() {
+  return config.BOT_AUTH_KEY_DIR || path.join(defaultAppDataDir(), "keys");
+}
+
+export function trustMemoryPath() {
+  return config.TRUST_MEMORY_PATH || path.join(defaultAppDataDir(), "trust-memory.json");
+}
+
+export const webBotAuthKeypair = config.BOT_AUTH_AGENT_URL
+  ? {
+      ...loadOrCreateKeypair(botAuthKeyDir(), {
+        onPersistFailure: (err) => {
+          console.error(
+            "[syncralis-web-agent] could not persist Web Bot Auth keypair to " +
+              `${botAuthKeyDir()} (${String(err?.message || err)}) — using an ` +
+              "in-memory-only key for this process; requests will be signed with " +
+              "a NEW key on every restart until this is fixed.",
+          );
+        },
+      }),
+      agentDirectoryUrl: config.BOT_AUTH_AGENT_URL,
+    }
+  : null;

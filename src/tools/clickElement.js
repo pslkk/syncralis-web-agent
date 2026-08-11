@@ -1,5 +1,6 @@
 import { newTaskSession, safeGoto } from "../browser.js";
 import { textLocator } from "./textLocator.js";
+import { assertElementIsHumanVisible } from "./elementVisibility.js";
 import {
   sanitizeUntrustedText,
   annotateWithInjectionSignals,
@@ -22,6 +23,7 @@ export async function clickElement({ url, matchText, selector }) {
     }
 
     await locator.waitFor({ state: "visible", timeout: 10000 });
+    await assertElementIsHumanVisible(locator, { url, action: "click" });
     await Promise.all([
       session.page.waitForLoadState("domcontentloaded").catch(() => {}),
       locator.click(),

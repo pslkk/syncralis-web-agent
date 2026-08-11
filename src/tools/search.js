@@ -30,20 +30,22 @@ export async function webSearch({ query, mentionedBrands = [], maxResults = 8 })
     throw err;
   }
 
-  const results = outcome.results
-    .filter((r) => r.href && /^https?:\/\//i.test(r.href))
-    .slice(0, maxResults)
-    .map((r) => {
-      const trust = scoreDomain(r.href, { mentionedBrands });
-      return {
-        title: sanitizeUntrustedText(r.title, { maxLength: 200 }),
-        href: r.href,
-        snippet: sanitizeUntrustedText(r.snippet || "", { maxLength: 500 }),
-        ...(r.publishedDate ? { publishedDate: r.publishedDate } : {}),
-        trust,
-      };
-    })
-    .sort((a, b) => b.trust.score - a.trust.score);
+  const scored = await Promise.all(
+    outcome.results
+      .filter((r) => r.href && /^https?:\/\//i.test(r.href))
+      .slice(0, maxResults)
+      .map(async (r) => {
+        const trust = await scoreDomain(r.href, { mentionedBrands });
+        return {
+          title: sanitizeUntrustedText(r.title, { maxLength: 200 }),
+          href: r.href,
+          snippet: sanitizeUntrustedText(r.snippet || "", { maxLength: 500 }),
+          ...(r.publishedDate ? { publishedDate: r.publishedDate } : {}),
+          trust,
+        };
+      })
+  );
+  const results = scored.sort((a, b) => b.trust.score - a.trust.score);
 
   const payload = {
     query,

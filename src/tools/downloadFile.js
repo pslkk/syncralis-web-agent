@@ -6,6 +6,7 @@ import { assertClosed, recordSuccess, recordFailure } from "../security/circuitB
 import { logEvent } from "../security/auditLog.js";
 import { handleDownload } from "../quarantine.js";
 import { textLocator } from "./textLocator.js";
+import { assertElementIsHumanVisible } from "./elementVisibility.js";
 
 async function gotoForDirectDownload(page, directUrl) {
   assertClosed(directUrl);
@@ -63,6 +64,7 @@ export async function downloadFile({ url, matchText, selector, directUrl }) {
     }
 
     await locator.waitFor({ state: "visible", timeout: 10000 });
+    await assertElementIsHumanVisible(locator, { url, action: "download" });
     const [download] = await Promise.all([
       session.page.waitForEvent("download", { timeout: 20000 }),
       locator.click(),

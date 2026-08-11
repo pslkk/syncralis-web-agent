@@ -1,10 +1,36 @@
 import { chromium } from "playwright";
-import { config } from "./config.js";
+import { config, webBotAuthKeypair } from "./config.js";
 import { assertSafeTarget, installSsrfGuard } from "./security/ssrf.js";
 import { isAllowedByRobots } from "./security/robots.js";
 import { acquireSlot } from "./security/rateLimiter.js";
 import { assertClosed, recordSuccess, recordFailure } from "./security/circuitBreaker.js";
 import { logEvent } from "./security/auditLog.js";
+import { signRequest } from "./security/webBotAuth.js";
+
+async function installWebBotAuthSigning(context, keypair) {
+  if (!keypair) return;
+
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    try {
+      const signatureHeaders = signRequest({
+        method: request.method(),
+        url: request.url(),
+        keyid: keypair.keyid,
+        privateKeyPem: keypair.privateKeyPem,
+        agentDirectoryUrl: keypair.agentDirectoryUrl,
+      });
+      await route.fallback({ headers: { ...request.headers(), ...signatureHeaders } });
+    } catch (err) {
+      await logEvent({
+        action: "web_bot_auth_signing_failed",
+        url: request.url(),
+        error: String(err?.message || err),
+      }).catch(() => {});
+      await route.fallback();
+    }
+  });
+}
 
 let browserPromise = null;
 
@@ -61,6 +87,7 @@ export async function newTaskSession({ userAgent } = {}) {
   context.setDefaultNavigationTimeout(20000);
 
   await installSsrfGuard(context);
+  await installWebBotAuthSigning(context, webBotAuthKeypair);
 
   const page = await context.newPage();
 

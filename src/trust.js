@@ -1,7 +1,8 @@
 import { URL } from "node:url";
 import { isIP } from "node:net";
-import { config } from "./config.js";
+import { config, trustMemoryPath } from "./config.js";
 import { MULTI_LABEL_SUFFIXES } from "./security/publicSuffix.js";
+import { getMemoryEntry, evaluatePromotion } from "./trustMemory.js";
 
 const CURATED_ALLOWLIST = new Set([
   "wikipedia.org",
@@ -66,15 +67,16 @@ function levenshtein(a, b) {
   return dp[a.length][b.length];
 }
 
-export function scoreDomain(rawUrl, context = {}) {
+export async function scoreDomain(rawUrl, context = {}) {
   const reasons = [];
   let score = 50; // neutral baseline
+  let hardFlag = false;
 
   let url;
   try {
     url = new URL(rawUrl);
   } catch {
-    return { score: 0, verdict: "low", reasons: ["Not a valid URL"], domain: rawUrl };
+    return { score: 0, verdict: "low", hardFlag: true, reasons: ["Not a valid URL"], domain: rawUrl };
   }
 
   const hostname = url.hostname.toLowerCase();
@@ -86,6 +88,7 @@ export function scoreDomain(rawUrl, context = {}) {
     reasons.push("Uses HTTPS");
   } else {
     score -= 25;
+    hardFlag = true;
     reasons.push("Not using HTTPS");
   }
 
@@ -122,6 +125,7 @@ export function scoreDomain(rawUrl, context = {}) {
       );
     } else if (closeToken) {
       score -= 30;
+      hardFlag = true;
       reasons.push(
         `Domain segment "${closeToken}" looks like a typosquat of "${brand}"`
       );
@@ -136,13 +140,34 @@ export function scoreDomain(rawUrl, context = {}) {
 
   if (/\.(tk|ml|ga|cf)$/.test(hostname)) {
     score -= 20;
+    hardFlag = true;
     reasons.push("Free TLD commonly associated with abuse");
   }
 
   score = Math.max(0, Math.min(100, score));
-  const verdict = score >= 80 ? "high" : score >= 50 ? "medium" : "low";
+  let verdict = score >= 80 ? "high" : score >= 50 ? "medium" : "low";
 
-  return { score, verdict, reasons, domain };
+  if (config.TRUST_MEMORY_ENABLED && !hardFlag && score < config.TRUST_THRESHOLD) {
+    try {
+      const entry = await getMemoryEntry(trustMemoryPath(), domain);
+      const promotion = evaluatePromotion(entry, {
+        minConfirmations: config.TRUST_MEMORY_MIN_CONFIRMATIONS,
+        maxAgeDays: config.TRUST_MEMORY_MAX_AGE_DAYS,
+        rejectionCooldownDays: config.TRUST_MEMORY_REJECTION_COOLDOWN_DAYS,
+      });
+      if (promotion.promoted) {
+        score = config.TRUST_THRESHOLD;
+        verdict = score >= 80 ? "high" : score >= 50 ? "medium" : "low";
+        reasons.push(promotion.reason);
+      } else if (promotion.reason) {
+        reasons.push(promotion.reason);
+      }
+    } catch {
+      // Trust memory is best-effort; any failure here must never affect the heuristic score already computed above.
+    }
+  }
+
+  return { score, verdict, hardFlag, reasons, domain };
 }
 
 export function trustThreshold() {
