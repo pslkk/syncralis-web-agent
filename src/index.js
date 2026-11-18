@@ -49,7 +49,7 @@ export async function startServer() {
       title: "Web search",
       description:
         "Search the web via an authenticated search API (Tavily and/or Brave — configure with " +
-        "SYNCRALIS_WEB_AGENT_TAVILY_API_KEY / SYNCRALIS_WEB_AGENT_BRAVE_API_KEY) and return candidate " +
+        "TAVILY_API_KEY / BRAVE_API_KEY in the config file) and return candidate " +
         "result URLs, each with a trust score (0-100) and reasons.",
       inputSchema: {
         query: z.string(),

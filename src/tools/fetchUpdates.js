@@ -27,7 +27,7 @@ async function fetchX({ entity, mentionedBrands }) {
           platform: "x",
           method: "official_api",
           ok: false,
-          reason: `X API returned ${resp.status}. Check SYNCRALIS_WEB_AGENT_X_BEARER_TOKEN and your API access tier.`,
+          reason: `X API returned ${resp.status}. Check X_BEARER_TOKEN in the config file and your API access tier.`,
         };
       }
       const data = await resp.json();
@@ -50,7 +50,7 @@ async function fetchX({ entity, mentionedBrands }) {
       caveat:
         "No X_BEARER_TOKEN configured — this is a best-effort web search for the account, not a direct read of the timeline. " +
         "X actively blocks unauthenticated/headless access, so live tweet content may be unavailable. " +
-        "For reliable results, set SYNCRALIS_WEB_AGENT_X_BEARER_TOKEN (X API v2).",
+        "For reliable results, set X_BEARER_TOKEN in the config file (X API v2).",
       candidates: searchResult.sources,
     };
   } catch (err) {
@@ -67,7 +67,7 @@ async function fetchInstagram({ entity, mentionedBrands }) {
       reason:
         "Instagram Graph API Business Discovery requires your own connected IG Business/Creator account ID " +
         "in addition to a token, and only returns data for other public Business/Creator accounts. " +
-        "Set SYNCRALIS_WEB_AGENT_INSTAGRAM_BUSINESS_ACCOUNT_ID and wire the business_discovery field query in this function to enable it.",
+        "Set INSTAGRAM_BUSINESS_ACCOUNT_ID in the config file and wire the business_discovery field query in this function to enable it.",
     };
   }
 

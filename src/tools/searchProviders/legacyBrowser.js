@@ -9,7 +9,7 @@ export async function searchLegacyBrowser({ query, maxResults }) {
     const engineUrl = `${LEGACY_BROWSER_ENDPOINT}?q=${encodeURIComponent(query)}`;
     await safeGoto(session.page, engineUrl);
 
-    const rawResults = await session.page.$$eval("a.result__a", (els) =>
+    const rawResults = await session.page.locator("a.result__a").evaluateAll((els) =>
       els.map((el) => ({
         title: el.textContent?.trim() || "",
         href: el.getAttribute("href") || "",

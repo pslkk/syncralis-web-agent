@@ -58,7 +58,7 @@ export async function assertElementIsHumanVisible(locator, { url, action }) {
     `Refused to ${action}: the matched element is not actually visible to a human ` +
       `(${reasons.join(", ")}), even though it passed basic DOM visibility checks. This is a ` +
       "common technique for tricking an automated agent into interacting with a decoy or " +
-      "hidden element. Set SYNCRALIS_WEB_AGENT_ALLOW_CLICK_ON_VISUALLY_HIDDEN_ELEMENTS=true to " +
+      "hidden element. Set ALLOW_CLICK_ON_VISUALLY_HIDDEN_ELEMENTS to true in the config file to " +
       "override at your own risk."
   );
 }

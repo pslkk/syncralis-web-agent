@@ -82,8 +82,7 @@ export async function openPage({ url, mentionedBrands = [] }) {
     const rawTitle = await session.page.title();
 
     const rawText = await session.page.evaluate(() => document.body?.innerText || "");
-    const rawClickables = await session.page.$$eval(
-      "a, button",
+    const rawClickables = await session.page.locator("a, button").evaluateAll(
       (els) =>
         els
           .slice(0, 200)
@@ -96,8 +95,7 @@ export async function openPage({ url, mentionedBrands = [] }) {
           .filter((c) => c.text || c.href)
     );
 
-    const rawDownloadableLinks = await session.page.$$eval(
-      "a[href]",
+    const rawDownloadableLinks = await session.page.locator("a[href]").evaluateAll(
       (els) => {
         const exts = ["pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "jpg", "jpeg", "png", "gif", "webp", "zip"];
         const re = new RegExp(`\\.(${exts.join("|")})(\\?|#|$)`, "i");

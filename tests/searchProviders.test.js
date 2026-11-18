@@ -1,11 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-process.env.SYNCRALIS_WEB_AGENT_TAVILY_API_KEY = "test-tavily-key";
-process.env.SYNCRALIS_WEB_AGENT_BRAVE_API_KEY = "test-brave-key";
-process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_PROVIDER = "auto";
-process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_MAX_RETRIES = "2";
-process.env.SYNCRALIS_WEB_AGENT_WEB_SEARCH_TIMEOUT_MS = "5000";
+// Config is loaded from a JSON file (see src/config.js). Point it at a throwaway
+// file with dummy values before the modules under test are imported.
+const testConfigDir = fs.mkdtempSync(path.join(os.tmpdir(), "syncralis-test-config-"));
+const testConfigFile = path.join(testConfigDir, "config.json");
+fs.writeFileSync(
+  testConfigFile,
+  JSON.stringify({
+    TAVILY_API_KEY: "test-tavily-key",
+    BRAVE_API_KEY: "test-brave-key",
+    WEB_SEARCH_PROVIDER: "auto",
+    WEB_SEARCH_MAX_RETRIES: 2,
+    WEB_SEARCH_TIMEOUT_MS: 5000,
+  }),
+  { mode: 0o600 },
+);
+process.argv.push("--config", testConfigFile);
+test.after(() => fs.rmSync(testConfigDir, { recursive: true, force: true }));
 
 const { searchTavily, TAVILY_ENDPOINT } = await import("../src/tools/searchProviders/tavily.js");
 const { searchBrave, BRAVE_ENDPOINT } = await import("../src/tools/searchProviders/brave.js");

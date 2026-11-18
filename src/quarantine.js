@@ -122,7 +122,7 @@ export async function handleDownload(download) {
       ok: false,
       reason:
         `Refused to download "${suggested}": macro-enabled Office format (.${ext}) can execute ` +
-        `embedded code on open. Set SYNCRALIS_WEB_AGENT_ALLOW_MACRO_OFFICE_DOWNLOADS=true to allow this ` +
+        `embedded code on open. Set ALLOW_MACRO_OFFICE_DOWNLOADS to true in the config file to allow this ` +
         `at your own risk.`,
     };
   }
@@ -137,7 +137,7 @@ export async function handleDownload(download) {
       ok: false,
       reason:
         `Refused to download "${suggested}": no file-signature check is defined for ".${ext}", ` +
-        `so it cannot be verified. Set SYNCRALIS_WEB_AGENT_ALLOW_UNVERIFIED_EXTENSIONS=true to allow ` +
+        `so it cannot be verified. Set ALLOW_UNVERIFIED_EXTENSIONS to true in the config file to allow ` +
         `unverified file types at your own risk.`,
     };
   }

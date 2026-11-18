@@ -15,7 +15,8 @@
     "src",
     "README.md",
     "SECURITY.md",
-    ".env.example"
+    "config.example.json",
+    "config.full.example.json"
   ],
   "keywords": ["mcp", "model-context-protocol", "claude", "cursor", "browser-automation", "playwright", "web-agent"],
   "scripts": {

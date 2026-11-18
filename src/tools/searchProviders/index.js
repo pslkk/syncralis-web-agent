@@ -83,9 +83,9 @@ export async function runWebSearch({ query, maxResults, safeSearch, timeoutMs })
 
   if (order.length === 0) {
     throw new Error(
-      "No web search provider is configured. Set SYNCRALIS_WEB_AGENT_TAVILY_API_KEY and/or " +
-        "SYNCRALIS_WEB_AGENT_BRAVE_API_KEY (get a key from tavily.com or brave.com/search/api), " +
-        "or set SYNCRALIS_WEB_AGENT_ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK=true to use a degraded, " +
+      "No web search provider is configured. Set TAVILY_API_KEY and/or BRAVE_API_KEY " +
+        "in the config file (get a key from Tavily or Brave Search API), " +
+        "or set ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK to true to use a degraded, " +
         "unauthenticated fallback that is likely to be blocked by anti-bot protection."
     );
   }

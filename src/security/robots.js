@@ -3,7 +3,8 @@ import { assertSafeTarget } from "./ssrf.js";
 
 const cache = new Map(); // origin -> { rules, fetchedAt }
 const CACHE_TTL_MS = 15 * 60 * 1000;
-const AGENT_TOKEN = "syncralis-web-agent";
+// robots.txt User-agent product name (public identifier, not a credential).
+const ROBOTS_PRODUCT_NAME = "syncralis-web-agent";
 
 function parseRobots(text) {
   const lines = text.split(/\r?\n/).map((l) => l.trim());
@@ -54,7 +55,7 @@ function ruleSpecificity(rulePath) {
 }
 
 function selectGroup(groups) {
-  const specific = groups.find((g) => g.agents.includes(AGENT_TOKEN));
+  const specific = groups.find((g) => g.agents.includes(ROBOTS_PRODUCT_NAME));
   if (specific) return specific;
   return groups.find((g) => g.agents.includes("*"));
 }

@@ -41,7 +41,7 @@ export async function searchTavily({ apiKey, query, maxResults, timeoutMs }) {
   }
 
   if (!resp.ok) {
-    throw await errorFromResponse(resp, "Tavily", "SYNCRALIS_WEB_AGENT_TAVILY_API_KEY");
+    throw await errorFromResponse(resp, "Tavily", "TAVILY_API_KEY");
   }
 
   let data;

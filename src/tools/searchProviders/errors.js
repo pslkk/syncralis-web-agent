@@ -24,7 +24,7 @@ export function parseRetryAfterMs(resp) {
 export async function errorFromResponse(resp, providerLabel, keyEnvVarHint) {
   if (resp.status === 401 || resp.status === 403) {
     return new SearchProviderError(
-      `${providerLabel} rejected the request (HTTP ${resp.status}) — check ${keyEnvVarHint} is set and valid.`,
+      `${providerLabel} rejected the request (HTTP ${resp.status}) — check ${keyEnvVarHint} is set and valid in the config file.`,
       { status: resp.status, kind: "auth" }
     );
   }

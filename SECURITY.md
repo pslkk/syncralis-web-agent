@@ -11,9 +11,9 @@ security reviewer can assess fit for their environment.
 | Disguised malicious download (e.g. `.exe` renamed `.jpg`, double extension) | Magic-byte signature check per claimed type; OOXML internal-structure check for docx/xlsx/pptx; blocks known-dangerous extensions anywhere in the filename, not just the suffix | `src/quarantine.js` |
 | Malware distributed via a "legitimate-looking" download | Optional VirusTotal hash-reputation check (requires API key) | `src/quarantine.js` |
 | Uncontrolled resource use / abusive crawling of a target site | Per-domain token-bucket rate limiting; per-domain circuit breaker after repeated failures | `src/security/rateLimiter.js`, `src/security/circuitBreaker.js` |
-| Search blocked by anti-bot / CAPTCHA walls ("are you a bot") | `web_search` calls an authenticated search API (Tavily and/or Brave) instead of scraping a search engine's HTML through a headless browser, with per-provider retry+backoff, circuit breaking, and rate limiting; automatic failover between configured providers; an unauthenticated browser-scrape path exists only as an explicit opt-in last resort (`SYNCRALIS_WEB_AGENT_ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK`) | `src/tools/searchProviders/*`, `src/tools/search.js` |
+| Search blocked by anti-bot / CAPTCHA walls ("are you a bot") | `web_search` calls an authenticated search API (Tavily and/or Brave) instead of scraping a search engine's HTML through a headless browser, with per-provider retry+backoff, circuit breaking, and rate limiting; automatic failover between configured providers; an unauthenticated browser-scrape path exists only as an explicit opt-in last resort (`ALLOW_LEGACY_BROWSER_SEARCH_FALLBACK`) | `src/tools/searchProviders/*`, `src/tools/search.js` |
 | Search API key leakage in logs/errors | Keys are only ever sent in the `Authorization`/`X-Subscription-Token` request header, never logged, never included in error messages or audit log entries | `src/tools/searchProviders/*`, `src/security/auditLog.js` |
-| Violating site policy | robots.txt is fetched and enforced by default (`SYNCRALIS_WEB_AGENT_RESPECT_ROBOTS_TXT=true`) | `src/security/robots.js` |
+| Violating site policy | robots.txt is fetched and enforced by default (`"RESPECT_ROBOTS_TXT": true`) | `src/security/robots.js` |
 | Acting on a low-trust/impersonating domain without oversight | Every click/download is trust-scored (0-100); below threshold, the action is staged and requires explicit user confirmation via `confirm_action` rather than proceeding | `src/trust.js`, `src/confirmations.js` |
 | No audit trail for compliance review | Every navigation and risky-action decision is logged as structured JSON (stderr always, optional file) | `src/security/auditLog.js` |
 | Misconfiguration causing silent unsafe behavior | All env config is schema-validated at startup; invalid config throws immediately with a clear message | `src/config.js` |
@@ -31,8 +31,8 @@ security reviewer can assess fit for their environment.
   the "high trust" verdict as "passed reasonable automated checks," not as
   a guarantee.
 - **X (Twitter) and Instagram**: reliable reads require official API
-  credentials you provide (`SYNCRALIS_WEB_AGENT_X_BEARER_TOKEN`,
-  `SYNCRALIS_WEB_AGENT_INSTAGRAM_GRAPH_TOKEN` + business account ID). Without
+  credentials you provide (`X_BEARER_TOKEN`,
+  `INSTAGRAM_GRAPH_TOKEN` + business account ID). Without
   them, the agent does a best-effort public web search rather than
   attempting to defeat login walls or anti-bot protections — this is a
   deliberate design choice, not a missing feature.
@@ -50,9 +50,9 @@ security reviewer can assess fit for their environment.
 
 - Run in a container with egress restricted to an explicit domain allowlist
   at the network layer (defense in depth alongside the in-app SSRF guard).
-- Ship `SYNCRALIS_WEB_AGENT_AUDIT_LOG_PATH` to your centralized logging/SIEM.
+- Ship `AUDIT_LOG_PATH` to your centralized logging/SIEM.
 - Rotate/secure any API tokens (X, Instagram, VirusTotal) via your secrets
-  manager rather than plain `.env` files in production.
+  manager rather than a world-readable config file in production.
 - Review and adjust `CURATED_ALLOWLIST` / `BRAND_DOMAINS` in `src/trust.js`
   for the brands and sources relevant to your organization.
 
@@ -82,10 +82,10 @@ Since this is a local package you control the source for, review
   visibility check (non-zero bounding box, not `display:none`). A page has
   no legitimate reason to make the exact element an agent was told to click
   invisible to the person supposedly using it. Opt-out:
-  `SYNCRALIS_WEB_AGENT_ALLOW_CLICK_ON_VISUALLY_HIDDEN_ELEMENTS`. See
+  `ALLOW_CLICK_ON_VISUALLY_HIDDEN_ELEMENTS`. See
   `src/tools/elementVisibility.js`.
 - **[Added] Optional outbound Web Bot Auth signing** (RFC 9421 HTTP Message
-  Signatures, Ed25519). When `SYNCRALIS_WEB_AGENT_BOT_AUTH_AGENT_URL` is
+  Signatures, Ed25519). When `BOT_AUTH_AGENT_URL` is
   configured, this agent signs its own navigation requests so a site can
   cryptographically verify traffic came from a known, honestly-declared
   agent rather than an anonymous scraper. This is about this agent proving
@@ -99,7 +99,7 @@ Since this is a local package you control the source for, review
   typosquat, no-HTTPS, or free-abuse-TLD match) — while a single rejection
   blocks any promotion for a cooldown window regardless of prior
   confirmation count. On by default; disable with
-  `SYNCRALIS_WEB_AGENT_TRUST_MEMORY_ENABLED=false` for deployments that
+  `"TRUST_MEMORY_ENABLED": false` for deployments that
   require fully stateless, heuristic-only scoring. See `src/trustMemory.js`.
 - **[Added]** `reject_action` tool. Previously the only way to decline a
   staged action was to let its confirmation id expire, which recorded
@@ -206,11 +206,11 @@ be called enterprise-production-ready:
 - **[Fixed] IPv6 multicast (`ff00::/8`) wasn't blocked** - not a routable
   unicast destination for a browser request, but wasn't explicitly denied.
 - **[Fixed] robots.txt fetch bypassed the SSRF guard.** `fetchRobots()`
-  called the global `fetch()` directly rather than going through
+  called the global Fetch API directly rather than going through
   `assertSafeTarget()` (it isn't a browser-context request, so
   `installSsrfGuard`'s route interceptor never saw it). If a hostname's DNS
   answer changed between the caller's `assertSafeTarget()` check and this
-  fetch (rebinding), robots.js would make an unguarded request to whatever
+  request (rebinding), robots.js would make an unguarded request to whatever
   the second lookup returned. Now validated before fetching
   (`src/security/robots.js`).
 - **[Fixed] robots.txt parser didn't support `*` wildcards or `$` end-
@@ -234,14 +234,14 @@ be called enterprise-production-ready:
   note - meaning it was never actually verified, just accepted. Now
   extensions with no defined signature check are refused by default unless
   they're a small plain-text allowlist (txt/csv/json/xml/md) or the new
-  `SYNCRALIS_WEB_AGENT_ALLOW_UNVERIFIED_EXTENSIONS` override is set.
+  `ALLOW_UNVERIFIED_EXTENSIONS` override is set.
 - **[Fixed] Macro-enabled Office formats (`.docm`/`.xlsm`/`.pptm`/`.xlsb`/
   `.dotm`/`.xltm`/`.potm`) were not distinguished from their macro-free
   counterparts.** They share the same ZIP/OOXML container and internal
   markers as `.docx`/`.xlsx`/`.pptx`, so they passed the same signature
   check and were accepted - despite being one of the most common real-world
   malware delivery formats via embedded VBA. Now explicitly refused unless
-  `SYNCRALIS_WEB_AGENT_ALLOW_MACRO_OFFICE_DOWNLOADS=true`.
+  `"ALLOW_MACRO_OFFICE_DOWNLOADS": true`.
 - **[Fixed] Dangerous-extension denylist was missing several common
   malware-delivery formats**: `.hta`, `.chm`, `.jse`, `.vbe`, `.wsh`,
   `.wsc`, `.msc`, `.cpl`, `.scf`, `.pif`, `.url`, `.jnlp`, `.appx`,
@@ -327,6 +327,6 @@ this was shippable as "production ready":
   conversation) stayed in memory forever. Staged actions now expire after
   15 minutes and are swept periodically.
 - **[Fixed] `research_query` concurrency bypassed config validation** by
-  reading `process.env` directly instead of the zod-validated `config`
+  reading the environment directly instead of the validated `config`
   object, silently ignoring the schema's bounds (1-16). Now uses the
   validated value.

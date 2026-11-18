@@ -39,7 +39,7 @@ export async function searchBrave({ apiKey, query, maxResults, safeSearch, timeo
   }
 
   if (!resp.ok) {
-    throw await errorFromResponse(resp, "Brave Search", "SYNCRALIS_WEB_AGENT_BRAVE_API_KEY");
+    throw await errorFromResponse(resp, "Brave Search", "BRAVE_API_KEY");
   }
 
   let data;
