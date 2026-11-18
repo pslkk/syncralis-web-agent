@@ -39,7 +39,7 @@ async function recordTrustMemoryDecision(meta, decision, confirmationId) {
 export async function startServer() {
   const server = new McpServer({
     name: "syncralis-web-agent",
-    version: "2.1.0",
+    version: "2.1.1",
   });
 
 
