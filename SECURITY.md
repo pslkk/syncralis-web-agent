@@ -61,7 +61,7 @@ security reviewer can assess fit for their environment.
 Since this is a local package you control the source for, review
 `src/security/*` directly and adjust as needed for your risk tolerance.
 
-## Changelog: v2.1.0 hardening pass
+## Changelog: v2.1.1 hardening pass
 
 - **[Added] Visually-hidden-text deception detection.** `open_page` now
   additionally scans the DOM for text that is present and readable by the
