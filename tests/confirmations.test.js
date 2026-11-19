@@ -77,3 +77,31 @@ test("confirmAction still returns meta on a run() failure", async () => {
   assert.equal(result.ok, false);
   assert.deepEqual(result.meta, { domain: "risky.example" });
 });
+
+test("confirmations are invisible and unusable to other owners", async () => {
+  let ran = 0;
+  const id = stageAction("owned", async () => ((ran += 1), "x"), { domain: "example.com" }, "alice");
+
+  assert.ok(listPending("alice").some((p) => p.id === id));
+  assert.ok(!listPending("bob").some((p) => p.id === id));
+  assert.equal(peekAction(id, "bob"), undefined);
+  assert.equal(rejectAction(id, "bob"), false);
+
+  const stolen = await confirmAction(id, "bob");
+  assert.equal(stolen.ok, false);
+  assert.equal(ran, 0, "another owner must never be able to run the action");
+
+  const mine = await confirmAction(id, "alice");
+  assert.equal(mine.ok, true);
+  assert.equal(ran, 1);
+});
+
+test("confirmation ids are unguessable and owner staging is capped", () => {
+  const a = stageAction("a", async () => {}, {}, "capper");
+  const b = stageAction("b", async () => {}, {}, "capper");
+  assert.match(a, /^act_[0-9a-f]{24}$/);
+  assert.notEqual(a, b);
+  for (let i = 0; i < 48; i++) stageAction("fill", async () => {}, {}, "capper");
+  assert.throws(() => stageAction("one too many", async () => {}, {}, "capper"), /Too many actions/);
+  for (const p of listPending("capper")) rejectAction(p.id, "capper");
+});

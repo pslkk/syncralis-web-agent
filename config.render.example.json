@@ -1,0 +1,16 @@
+{
+  "TAVILY_API_KEY": "tvly-REPLACE_ME",
+  "WEB_SEARCH_PROVIDER": "auto",
+
+  "AUDIT_LOG_PATH": "/var/data/audit.log",
+  "AUDIT_LOG_MAX_BYTES": 10485760,
+  "TRUST_MEMORY_PATH": "/var/data/trust-memory.json",
+  "BOT_AUTH_KEY_DIR": "/var/data/keys",
+  "DOWNLOAD_DIR": "/var/data/downloads",
+
+  "CHROMIUM_NO_SANDBOX": true,
+  "CHROMIUM_DISABLE_DEV_SHM": true,
+  "SSRF_PINNED_PROXY": true,
+  "STREAM_DOWNLOAD_LIMIT": true,
+  "MAX_CONCURRENT_BROWSER_TASKS": 1
+}

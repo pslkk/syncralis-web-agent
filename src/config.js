@@ -43,6 +43,18 @@ const schema = z.strictObject({
   INSTAGRAM_BUSINESS_ACCOUNT_ID: z.string().optional(),
   VIRUSTOTAL_API_KEY: z.string().optional(),
   NAVIGATION_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
+  MAX_CONCURRENT_BROWSER_TASKS: z.coerce.number().int().min(1).max(16).default(4),
+  BROWSER_QUEUE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  TOOL_TIMEOUT_MS: z.coerce.number().int().min(1000).default(120000),
+  AUDIT_LOG_MAX_BYTES: z.coerce.number().int().min(0).default(0), // 0 = never rotate (original behaviour)
+  CHROMIUM_NO_SANDBOX: bool(false),
+  CHROMIUM_DISABLE_DEV_SHM: bool(false),
+  CHROMIUM_LOW_MEMORY: bool(false),
+  // Hosted-mode hardening, off by default so local stdio behaves exactly like the original.
+  SSRF_PINNED_PROXY: bool(false),
+  STREAM_DOWNLOAD_LIMIT: bool(false),
+  DOWNLOAD_TTL_MINUTES: z.coerce.number().int().positive().default(60),
+  MAX_INLINE_DOWNLOAD_BYTES: z.coerce.number().int().positive().default(5 * 1024 * 1024),
 
   WEB_SEARCH_PROVIDER: z.enum(["auto", "tavily", "brave"]).default("auto"),
   TAVILY_API_KEY: z.string().optional(),
@@ -132,6 +144,15 @@ export function botAuthKeyDir() {
 
 export function trustMemoryPath() {
   return config.TRUST_MEMORY_PATH || path.join(defaultAppDataDir(), "trust-memory.json");
+}
+
+// Each remote client gets its own trust-memory file so one client's approvals can never
+// auto-approve a domain for another client.
+export function trustMemoryPathFor(owner) {
+  const base = trustMemoryPath();
+  if (!owner || owner === "local") return base;
+  const safe = String(owner).toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 32);
+  return base.replace(/(\.json)?$/, `.${safe}.json`);
 }
 
 export const webBotAuthKeypair = config.BOT_AUTH_AGENT_URL

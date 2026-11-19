@@ -1,5 +1,8 @@
+import { randomBytes } from "node:crypto";
+
 const pending = new Map();
-let counter = 0;
+const DEFAULT_OWNER = "local";
+const MAX_PENDING_PER_OWNER = 50;
 
 const TTL_MS = 15 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 60 * 1000;
@@ -20,15 +23,26 @@ function ensureSweeper() {
   sweepTimer.unref?.();
 }
 
-export function stageAction(description, run, meta = {}) {
+export function stageAction(description, run, meta = {}, owner = DEFAULT_OWNER) {
   ensureSweeper();
-  const id = `act_${++counter}_${Date.now()}`;
-  pending.set(id, { description, run, createdAt: Date.now(), meta });
+  sweepExpired();
+  const mine = [...pending.entries()].filter(([, v]) => v.owner === owner);
+  if (owner !== DEFAULT_OWNER && mine.length >= MAX_PENDING_PER_OWNER) {
+    throw new Error("Too many actions awaiting confirmation; confirm or reject some first.");
+  }
+  const id = `act_${randomBytes(12).toString("hex")}`;
+  pending.set(id, { description, run, createdAt: Date.now(), meta, owner });
   return id;
 }
 
-export function peekAction(id) {
+// An action is only visible to the owner that staged it.
+function getOwned(id, owner) {
   const entry = pending.get(id);
+  return entry && entry.owner === owner ? entry : undefined;
+}
+
+export function peekAction(id, owner = DEFAULT_OWNER) {
+  const entry = getOwned(id, owner);
   if (!entry) return undefined;
   return {
     description: entry.description,
@@ -37,8 +51,8 @@ export function peekAction(id) {
   };
 }
 
-export async function confirmAction(id) {
-  const entry = pending.get(id);
+export async function confirmAction(id, owner = DEFAULT_OWNER) {
+  const entry = getOwned(id, owner);
   if (!entry) {
     return { ok: false, error: `No pending action with id "${id}" (it may have expired or already run).` };
   }
@@ -54,13 +68,15 @@ export async function confirmAction(id) {
   }
 }
 
-export function rejectAction(id) {
-  return pending.delete(id);
+export function rejectAction(id, owner = DEFAULT_OWNER) {
+  return getOwned(id, owner) ? pending.delete(id) : false;
 }
 
-export function listPending() {
+export function listPending(owner = DEFAULT_OWNER) {
   sweepExpired();
-  return Array.from(pending.entries()).map(([id, v]) => ({
+  return Array.from(pending.entries())
+    .filter(([, v]) => v.owner === owner)
+    .map(([id, v]) => ({
     id,
     description: v.description,
     ageSeconds: Math.round((Date.now() - v.createdAt) / 1000),

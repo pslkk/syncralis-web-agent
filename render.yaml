@@ -1,0 +1,17 @@
+# Free-plan compatible Blueprint (no persistent disk). Everything works the same as on paid
+# plans; the differences are durability and capacity (see DEPLOY.md):
+#   - the filesystem is ephemeral (audit file, trust memory, keys, downloads reset on restart)
+#   - the service spins down after 15 min idle and cold-starts on the next request
+#   - 512 MB RAM is tight for Chromium (the entrypoint limits it to one browser at a time)
+# For persistence use render.paid.yaml instead.
+services:
+  - type: web
+    name: syncralis-web-agent
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: MCP_AUTH_TOKENS
+        sync: false          # set in the dashboard: name:token[,name2:token2]
+      - key: TRUST_PROXY_HOPS
+        value: "1"

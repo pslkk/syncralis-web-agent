@@ -3,6 +3,7 @@ import { mkdir, stat, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { config } from "./config.js";
+import { saveWithLimit } from "./security/sizeLimit.js";
 
 const MAGIC_BYTES = {
   jpg: [0xff, 0xd8, 0xff],
@@ -36,7 +37,7 @@ export function quarantineDir() {
 
 async function ensureDir() {
   const dir = quarantineDir();
-  await mkdir(dir, { recursive: true });
+  await mkdir(dir, config.STREAM_DOWNLOAD_LIMIT ? { recursive: true, mode: 0o700 } : { recursive: true });
   return dir;
 }
 
@@ -142,7 +143,15 @@ export async function handleDownload(download) {
     };
   }
 
-  await download.saveAs(destPath);
+  // Original behaviour: save fully, then check the size below. Hosted mode streams with a live cap.
+  let saved = { ok: true };
+  if (config.STREAM_DOWNLOAD_LIMIT) saved = await saveWithLimit(download, destPath, config.MAX_DOWNLOAD_BYTES);
+  else await download.saveAs(destPath);
+  if (!saved.ok) {
+    await download.cancel().catch(() => {});
+    await unlink(destPath).catch(() => {});
+    return { ok: false, reason: saved.reason, filename: suggested };
+  }
 
   const cleanupAndFail = async (reason, extra = {}) => {
     await unlink(destPath).catch(() => {});

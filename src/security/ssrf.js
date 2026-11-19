@@ -190,6 +190,47 @@ export async function assertSafeTarget(rawUrl) {
   }
 }
 
+/**
+ * Resolves `hostname` ONCE and returns { address, family } after validating every address it
+ * resolves to. Callers must connect to the returned address (not re-resolve the name), which
+ * is what closes the DNS-rebinding window between "check" and "use".
+ */
+export async function resolveSafeHost(hostname) {
+  const bare = stripBrackets(String(hostname).toLowerCase());
+  const guard = !config.ALLOW_PRIVATE_NETWORK_TARGETS;
+
+  if (guard && BLOCKED_HOSTNAMES.has(bare)) throw new Error(`Blocked hostname: ${bare}`);
+
+  const version = isIP(bare);
+  if (version) {
+    if (guard) {
+      const reason = checkLiteralIP(bare);
+      if (reason) throw new Error(reason);
+    }
+    return { address: bare, family: version };
+  }
+
+  let addresses;
+  try {
+    addresses = await dns.lookup(bare, { all: true });
+  } catch (err) {
+    throw new Error(`Blocked target: "${bare}" could not be resolved (${String(err?.code || err?.message || err)})`);
+  }
+  if (addresses.length === 0) throw new Error(`Blocked target: "${bare}" resolved to no addresses`);
+
+  if (guard) {
+    for (const { address, family } of addresses) {
+      if (family === 4 && isPrivateIPv4(address)) {
+        throw new Error(`Blocked target: "${bare}" resolves to private IPv4 address ${address}`);
+      }
+      if (family === 6 && isPrivateIPv6(address)) {
+        throw new Error(`Blocked target: "${bare}" resolves to private IPv6 address ${address}`);
+      }
+    }
+  }
+  return { address: addresses[0].address, family: addresses[0].family };
+}
+
 const ROUTE_GUARD_CACHE_TTL_MS = 5000;
 const routeGuardCache = new Map(); // hostname -> { safe, error, expiresAt }
 

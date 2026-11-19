@@ -1,0 +1,19 @@
+# Paid-plan Blueprint with a persistent disk. In Render, choose this file when creating the
+# Blueprint (or copy it over render.yaml). Persistent disks are NOT available on the Free plan.
+services:
+  - type: web
+    name: syncralis-web-agent
+    runtime: docker
+    plan: standard           # 2 GB RAM; "starter" (512 MB) also works but runs one browser at a time
+    healthCheckPath: /health
+    disk:
+      name: syncralis-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: MCP_AUTH_TOKENS
+        sync: false
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: MAX_SESSIONS
+        value: "30"

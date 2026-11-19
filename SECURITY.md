@@ -61,6 +61,34 @@ security reviewer can assess fit for their environment.
 Since this is a local package you control the source for, review
 `src/security/*` directly and adjust as needed for your risk tolerance.
 
+## Changelog: v2.2.0 remote (HTTP) deployment
+
+New `bin/http.js` serves the agent over Streamable HTTP (`/mcp`) and legacy SSE (`/sse` + `/messages`)
+for hosts such as Render. stdio mode is behaviourally unchanged: every hardening item below applies only to
+HTTP mode (`buildServer({ remote: true })`). Because a remote instance is reachable by anyone who
+can guess its URL, the HTTP layer adds the following (all in `src/http/`):
+
+- **Authentication required.** Static bearer tokens (`MCP_AUTH_TOKENS`, 32+ chars, several active at once
+  for rotation). Tokens are only held as SHA-256 hashes and compared in constant time. The process refuses
+  to start without them.
+- **Per-client isolation.** Pending confirmations, trust memory and downloaded files are scoped to the
+  authenticated client. One client cannot list, confirm, reject, or retrieve another client's state, and
+  one client's approvals can never auto-approve a domain for another.
+- **Brute-force and abuse limits.** Failed-auth throttling per source IP, per-client request rate limit,
+  session caps (global and per client), idle-session expiry, 1 MB body limit, bounded tool inputs,
+  hard per-tool timeout, bounded browser concurrency with a bounded wait queue.
+- **Rebinding / cross-origin protection.** Host allow-list; browser `Origin` headers are rejected unless
+  explicitly allowed.
+- **Downloads.** Served only as `application/octet-stream` attachments to the owning client; server file
+  paths are never returned to remote clients; integrity (SHA-256) is re-checked before inline retrieval;
+  files expire after `DOWNLOAD_TTL_MINUTES`.
+- **Process hardening.** Container runs as a non-root user; Chromium crash recovery; audit log rotation.
+
+Residual risks: `confirm_action` is a tool call made by the same authenticated client as the request being
+confirmed, so human approval is enforced only by the model following its instructions, not out-of-band; `CHROMIUM_NO_SANDBOX` (needed in most container hosts) removes Chromium's inner sandbox,
+so the container boundary is the only isolation from hostile pages; a single static token per client has no
+expiry or scoping; sessions and state are in memory, so run exactly one instance.
+
 ## Changelog: v2.1.1 hardening pass
 
 - **[Added] Visually-hidden-text deception detection.** `open_page` now

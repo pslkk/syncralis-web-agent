@@ -49,7 +49,7 @@ export function evaluatePromotion(entry, options, now = new Date()) {
 }
 
 let writeQueue = Promise.resolve();
-let cache = null; // in-memory cache of the on-disk store, loaded lazily
+const caches = new Map(); // storePath -> in-memory copy of that on-disk store, loaded lazily
 
 async function readStore(storePath) {
   try {
@@ -71,8 +71,8 @@ async function writeStoreAtomic(storePath, data) {
 }
 
 async function getStore(storePath) {
-  if (!cache) cache = await readStore(storePath);
-  return cache;
+  if (!caches.has(storePath)) caches.set(storePath, await readStore(storePath));
+  return caches.get(storePath);
 }
 
 export async function getMemoryEntry(storePath, domain) {
@@ -109,7 +109,7 @@ export function recordDecision(storePath, domain, decision, now = new Date()) {
         throw new Error(`Unknown trust memory decision: "${decision}"`);
       }
 
-      cache = store;
+      caches.set(storePath, store);
       await writeStoreAtomic(storePath, store);
       return store[domain];
     })
@@ -120,6 +120,6 @@ export function recordDecision(storePath, domain, decision, now = new Date()) {
 }
 
 export function _resetCacheForTests() {
-  cache = null;
+  caches.clear();
   writeQueue = Promise.resolve();
 }

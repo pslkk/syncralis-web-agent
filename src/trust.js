@@ -1,6 +1,6 @@
 import { URL } from "node:url";
 import { isIP } from "node:net";
-import { config, trustMemoryPath } from "./config.js";
+import { config, trustMemoryPathFor } from "./config.js";
 import { MULTI_LABEL_SUFFIXES } from "./security/publicSuffix.js";
 import { getMemoryEntry, evaluatePromotion } from "./trustMemory.js";
 
@@ -149,7 +149,7 @@ export async function scoreDomain(rawUrl, context = {}) {
 
   if (config.TRUST_MEMORY_ENABLED && !hardFlag && score < config.TRUST_THRESHOLD) {
     try {
-      const entry = await getMemoryEntry(trustMemoryPath(), domain);
+      const entry = await getMemoryEntry(trustMemoryPathFor(context.owner), domain);
       const promotion = evaluatePromotion(entry, {
         minConfirmations: config.TRUST_MEMORY_MIN_CONFIRMATIONS,
         maxAgeDays: config.TRUST_MEMORY_MAX_AGE_DAYS,
