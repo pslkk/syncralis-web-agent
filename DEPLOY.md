@@ -7,9 +7,11 @@ listener, so on a web host it starts, sees stdin close, and exits. For hosting u
 ## 1. Generate a lockfile (once, locally)
 
 ```bash
-npm install --package-lock-only && git add package-lock.json
+npm install --package-lock-only --ignore-scripts && git add package-lock.json
 ```
 
+`--ignore-scripts` matters: without it npm runs this package's `postinstall` (`playwright install chromium`) before
+any dependency exists and fails with `playwright: not found`. A normal `npm install` also creates the lockfile.
 The Dockerfile uses `npm ci` when a lockfile exists, so builds are reproducible.
 
 ## 2. Create the service (Free or paid)
