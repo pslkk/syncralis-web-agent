@@ -26,12 +26,9 @@ case "$MEM" in
 esac
 
 # Config: a Render Secret File wins (put API keys there); otherwise write safe defaults.
-SECRET_CONFIG="/etc/secrets/config.json"
-if [ -f "$SECRET_CONFIG" ]; then
-  CONFIG="$SECRET_CONFIG"
-else
-  CONFIG="/tmp/syncralis-config.json"
-  cat > "$CONFIG" <<JSON
+DEFAULTS="/tmp/syncralis-defaults.json"
+CONFIG="/tmp/syncralis-config.json"
+cat > "$DEFAULTS" <<JSON
 {
   "AUDIT_LOG_PATH": "$DATA_DIR/audit.log",
   "AUDIT_LOG_MAX_BYTES": 10485760,
@@ -46,8 +43,24 @@ else
   "MAX_CONCURRENT_BROWSER_TASKS": $CONC
 }
 JSON
-  chown app:app "$CONFIG"
-  chmod 600 "$CONFIG"
+
+SECRET_CONFIG="${SECRET_CONFIG_PATH:-/etc/secrets/config.json}"
+if [ -f "$SECRET_CONFIG" ]; then
+  echo "[entrypoint] merging secret config $SECRET_CONFIG over hosted defaults" >&2
+  node -e '
+    const fs = require("fs");
+    const [defaultsPath, userPath, outPath] = process.argv.slice(1);
+    const defaults = JSON.parse(fs.readFileSync(defaultsPath, "utf8"));
+    let user;
+    try { user = JSON.parse(fs.readFileSync(userPath, "utf8")); }
+    catch (e) { console.error("[entrypoint] ERROR: " + userPath + " is not valid JSON: " + e.message); process.exit(1); }
+    fs.writeFileSync(outPath, JSON.stringify({ ...defaults, ...user }, null, 2), { mode: 0o600 });
+  ' "$DEFAULTS" "$SECRET_CONFIG" "$CONFIG"
+else
+  cp "$DEFAULTS" "$CONFIG"
 fi
+chown app:app "$CONFIG"
+chmod 600 "$CONFIG"
+rm -f "$DEFAULTS"
 
 exec gosu app "$@" --config "$CONFIG"
